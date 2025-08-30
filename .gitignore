@@ -1,2 +1,10 @@
 .venv
 *.jpg
+X_test_raw.csv
+X_train_mixup.csv
+y_test.csv
+y_train.csv
+tta_predictions.csv
+use_case_diagram
+UseCase.mdj
+classDiagram.mdj
