@@ -12,7 +12,7 @@ This project provides a Vision Transformer (ViT)-based framework for the multi-c
 - **Data format:** JPG
 - **Number of images:** 4000 images (approx. 1800 distinct leaves; remainder augmented by zooming and rotating)
 - **Diseases considered:** Seven diseases: Anthracnose, Bacterial Canker, Cutting Weevil, Die Back, Gall Midge, Powdery Mildew, Sooty Mould
-- **Number of classes:** Eight (including healthy category)
+- **Number of classes:** Eight (including healthy category as one class)
 - **Distribution:** Each category contains 500 images
 - **Acquisition:** Images captured from mango trees using mobile phone cameras
 - **Source locations:** Four mango orchards in Bangladesh:
