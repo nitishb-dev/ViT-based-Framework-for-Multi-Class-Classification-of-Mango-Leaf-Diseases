@@ -1,5 +1,6 @@
 .venv
 *.jpg
+E:\ViT-based-Framework-for-Multi-Class-Classification-of-Mango-Leaf-Diseases\__pycache__
 X_test_raw.csv
 X_train_mixup.csv
 y_test.csv
