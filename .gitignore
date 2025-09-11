@@ -1,11 +1,7 @@
 .venv
 *.jpg
 E:\ViT-based-Framework-for-Multi-Class-Classification-of-Mango-Leaf-Diseases\__pycache__
-X_test_raw.csv
-X_train_mixup.csv
-y_test.csv
-y_train.csv
-tta_predictions.csv
-use_case_diagram
-UseCase.mdj
-classDiagram.mdj
+E:\ViT-based-Framework-for-Multi-Class-Classification-of-Mango-Leaf-Diseases\dataset1
+E:\ViT-based-Framework-for-Multi-Class-Classification-of-Mango-Leaf-Diseases\dataset2
+E:\ViT-based-Framework-for-Multi-Class-Classification-of-Mango-Leaf-Diseases\dataset3
+E:\ViT-based-Framework-for-Multi-Class-Classification-of-Mango-Leaf-Diseases\dataset4
