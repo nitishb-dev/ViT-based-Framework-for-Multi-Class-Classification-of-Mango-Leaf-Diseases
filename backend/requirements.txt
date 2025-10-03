@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+python-multipart
+pillow
+torch>=2.1
+torchvision>=0.16
+timm>=0.9.0
+numpy>=1.24
