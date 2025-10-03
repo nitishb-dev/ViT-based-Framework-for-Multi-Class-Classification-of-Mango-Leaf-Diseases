@@ -1,22 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 
 const navItems = [
-  { name: 'About', href: '#about' },
-  { name: 'Introduction', href: '#introduction' },
-  { name: 'Methodology', href: '#methodology' },
-  { name: 'Predict', href: '#predict' },
-  { name: 'Results', href: '#results' },
+  { name: "About", href: "#about" },
+  { name: "Introduction", href: "#introduction" },
+  { name: "Methodology", href: "#methodology" },
+  { name: "Predict", href: "#predict" },
+  { name: "Results", href: "#results" },
 ];
 
 const Navbar = () => {
-  const [active, setActive] = useState('about');
+  const [active, setActive] = useState("about");
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Scroll-spy effect
   useEffect(() => {
     const handleScroll = () => {
       const offsets = navItems.map((item) => {
-        const el = document.getElementById(item.href.replace('#', ''));
+        const el = document.getElementById(item.href.replace("#", ""));
         return el ? el.offsetTop - 100 : 0;
       });
       const scrollY = window.scrollY;
@@ -24,21 +24,21 @@ const Navbar = () => {
       for (let i = 0; i < offsets.length; i++) {
         if (scrollY >= offsets[i]) idx = i;
       }
-      setActive(navItems[idx].href.replace('#', ''));
+      setActive(navItems[idx].href.replace("#", ""));
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Smooth scroll handler
   const handleNavClick = (e, href) => {
     e.preventDefault();
-    const id = href.replace('#', '');
+    const id = href.replace("#", "");
     const el = document.getElementById(id);
     if (el) {
       window.scrollTo({
         top: el.offsetTop - 80,
-        behavior: 'smooth',
+        behavior: "smooth",
       });
       setActive(id);
       setMenuOpen(false);
@@ -46,14 +46,18 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white shadow-md">
+    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg shadow-md transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-green-600 flex items-center gap-2">
+        <a
+          href="#about"
+          onClick={(e) => handleNavClick(e, "#about")}
+          className="text-xl font-bold text-green-600 flex items-center gap-2 hover:opacity-80 transition-opacity"
+        >
           <span role="img" aria-label="mango">
             🥭
-          </span>{' '}
+          </span>{" "}
           Mango Leaf Disease Classifier
-        </h1>
+        </a>
         {/* Desktop Nav */}
         <div className="hidden md:flex space-x-6">
           {navItems.map((item) => (
@@ -61,10 +65,10 @@ const Navbar = () => {
               key={item.name}
               href={item.href}
               onClick={(e) => handleNavClick(e, item.href)}
-              className={`transition font-medium px-3 py-1 rounded-lg ${
-                active === item.href.replace('#', '')
-                  ? 'bg-green-100 text-green-700 shadow'
-                  : 'text-gray-600 hover:bg-green-50 hover:text-green-700'
+              className={`transition-all duration-200 font-medium px-3 py-1 rounded-lg ${
+                active === item.href.replace("#", "")
+                  ? "bg-green-100 text-green-700 shadow-sm"
+                  : "text-gray-600 hover:bg-green-50 hover:text-green-700 transform hover:-translate-y-0.5"
               }`}
             >
               {item.name}
@@ -103,16 +107,16 @@ const Navbar = () => {
       </div>
       {/* Mobile Dropdown */}
       {menuOpen && (
-        <div className="md:hidden bg-white shadow-lg px-4 pb-4">
+        <div className="md:hidden bg-white/95 backdrop-blur-lg shadow-lg px-4 pb-4">
           {navItems.map((item) => (
             <a
               key={item.name}
               href={item.href}
               onClick={(e) => handleNavClick(e, item.href)}
-              className={`block py-2 px-3 rounded-lg mb-1 ${
-                active === item.href.replace('#', '')
-                  ? 'bg-green-100 text-green-700'
-                  : 'text-gray-600 hover:bg-green-50 hover:text-green-700'
+              className={`block py-2 px-3 rounded-lg mb-1 transition-colors duration-200 ${
+                active === item.href.replace("#", "")
+                  ? "bg-green-100 text-green-700"
+                  : "text-gray-600 hover:bg-green-50 hover:text-green-700"
               }`}
             >
               {item.name}
