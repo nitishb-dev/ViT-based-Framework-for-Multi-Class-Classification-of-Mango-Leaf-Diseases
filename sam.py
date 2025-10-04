@@ -5,7 +5,7 @@ from torch.optim import Optimizer
 
 
 class SAM(Optimizer):
-    def __init__(self, params, base_optimizer, rho=0.05, adaptive=False, **kwargs):
+    def __init__(self, params, base_optimizer, rho=0.03, adaptive=False, **kwargs):
         if isinstance(params, (list, tuple)) and len(params) > 0 and isinstance(params[0], dict):
             self.param_groups = params
         defaults = dict(rho=rho, adaptive=adaptive, **kwargs)

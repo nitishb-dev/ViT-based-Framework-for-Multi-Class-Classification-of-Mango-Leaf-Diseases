@@ -1,10 +1,10 @@
 import React from "react";
 
 const overall = {
-  accuracy: 0.99,
-  precision: 0.99,
-  recall: 0.99,
-  f1: 0.99,
+  accuracy: 99.33,
+  precision: 99.34,
+  recall: 99.34,
+  f1: 99.34,
 };
 
 const Results = () => (
@@ -16,24 +16,24 @@ const Results = () => (
       <div className="bg-green-50 rounded-xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 hover:bg-green-100 transition-all duration-300 text-center">
         <div className="font-semibold text-green-800">Accuracy</div>
         <div className="text-3xl font-bold text-green-600">
-          {overall.accuracy}
+          {overall.accuracy}%
         </div>
       </div>
       <div className="bg-green-50 rounded-xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 hover:bg-green-100 transition-all duration-300 text-center">
         <div className="font-semibold text-green-800">Precision</div>
         <div className="text-3xl font-bold text-green-600">
-          {overall.precision}
+          {overall.precision}%
         </div>
       </div>
       <div className="bg-green-50 rounded-xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 hover:bg-green-100 transition-all duration-300 text-center">
         <div className="font-semibold text-green-800">Recall</div>
         <div className="text-3xl font-bold text-green-600">
-          {overall.recall}
+          {overall.recall}%
         </div>
       </div>
       <div className="bg-green-50 rounded-xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 hover:bg-green-100 transition-all duration-300 text-center">
         <div className="font-semibold text-green-800">F1-score</div>
-        <div className="text-3xl font-bold text-green-600">{overall.f1}</div>
+        <div className="text-3xl font-bold text-green-600">{overall.f1}%</div>
       </div>
     </div>
     <div className="mt-4 text-gray-500 text-center text-sm">
