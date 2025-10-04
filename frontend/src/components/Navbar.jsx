@@ -1,20 +1,23 @@
 import React, { useEffect, useState } from "react";
+import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 
 const navItems = [
+  { name: "Home", href: "#home" },
   { name: "About", href: "#about" },
-  { name: "Introduction", href: "#introduction" },
   { name: "Methodology", href: "#methodology" },
   { name: "Predict", href: "#predict" },
   { name: "Results", href: "#results" },
 ];
 
 const Navbar = () => {
-  const [active, setActive] = useState("about");
+  const [active, setActive] = useState("home");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-  // Scroll-spy effect
   useEffect(() => {
     const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+      
       const offsets = navItems.map((item) => {
         const el = document.getElementById(item.href.replace("#", ""));
         return el ? el.offsetTop - 100 : 0;
@@ -26,11 +29,11 @@ const Navbar = () => {
       }
       setActive(navItems[idx].href.replace("#", ""));
     };
+    
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Smooth scroll handler
   const handleNavClick = (e, href) => {
     e.preventDefault();
     const id = href.replace("#", "");
@@ -46,84 +49,78 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg shadow-md transition-all duration-300">
-      <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-        <a
-          href="#about"
-          onClick={(e) => handleNavClick(e, "#about")}
-          className="text-xl font-bold text-green-600 flex items-center gap-2 hover:opacity-80 transition-opacity"
-        >
-          <span role="img" aria-label="mango">
-            🥭
-          </span>{" "}
-          Mango Leaf Disease Classifier
-        </a>
-        {/* Desktop Nav */}
-        <div className="hidden md:flex space-x-6">
-          {navItems.map((item) => (
-            <a
-              key={item.name}
-              href={item.href}
-              onClick={(e) => handleNavClick(e, item.href)}
-              className={`transition-all duration-200 font-medium px-3 py-1 rounded-lg ${
-                active === item.href.replace("#", "")
-                  ? "bg-green-100 text-green-700 shadow-sm"
-                  : "text-gray-600 hover:bg-green-50 hover:text-green-700 transform hover:-translate-y-0.5"
-              }`}
-            >
-              {item.name}
-            </a>
-          ))}
-        </div>
-        {/* Mobile Nav */}
-        <button
-          className="md:hidden p-2 rounded focus:outline-none focus:ring-2 focus:ring-green-400"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Toggle menu"
-        >
-          <svg
-            className="w-7 h-7 text-green-700"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+    <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+      scrolled 
+        ? "bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-100" 
+        : "bg-transparent"
+    }`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          <a
+            href="#home"
+            onClick={(e) => handleNavClick(e, "#home")}
+            className="flex items-center space-x-2 text-xl font-bold text-emerald-600 hover:text-emerald-700 transition-colors"
+          >
+            <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center">
+              <span className="text-white text-sm">🥭</span>
+            </div>
+            <span className="hidden sm:block">MangoLeaf AI</span>
+          </a>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-1">
+            {navItems.map((item) => (
+              <a
+                key={item.name}
+                href={item.href}
+                onClick={(e) => handleNavClick(e, item.href)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  active === item.href.replace("#", "")
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "text-gray-600 hover:text-emerald-600 hover:bg-emerald-50"
+                }`}
+              >
+                {item.name}
+              </a>
+            ))}
+          </div>
+
+          {/* Mobile menu button */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="md:hidden p-2 rounded-lg text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+            aria-label="Toggle menu"
           >
             {menuOpen ? (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
+              <XMarkIcon className="h-6 w-6" />
             ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 8h16M4 16h16"
-              />
+              <Bars3Icon className="h-6 w-6" />
             )}
-          </svg>
-        </button>
-      </div>
-      {/* Mobile Dropdown */}
-      {menuOpen && (
-        <div className="md:hidden bg-white/95 backdrop-blur-lg shadow-lg px-4 pb-4">
-          {navItems.map((item) => (
-            <a
-              key={item.name}
-              href={item.href}
-              onClick={(e) => handleNavClick(e, item.href)}
-              className={`block py-2 px-3 rounded-lg mb-1 transition-colors duration-200 ${
-                active === item.href.replace("#", "")
-                  ? "bg-green-100 text-green-700"
-                  : "text-gray-600 hover:bg-green-50 hover:text-green-700"
-              }`}
-            >
-              {item.name}
-            </a>
-          ))}
+          </button>
         </div>
-      )}
+
+        {/* Mobile Navigation */}
+        {menuOpen && (
+          <div className="md:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-lg">
+            <div className="px-4 py-2 space-y-1">
+              {navItems.map((item) => (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  onClick={(e) => handleNavClick(e, item.href)}
+                  className={`block px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                    active === item.href.replace("#", "")
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "text-gray-600 hover:text-emerald-600 hover:bg-emerald-50"
+                  }`}
+                >
+                  {item.name}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </nav>
   );
 };

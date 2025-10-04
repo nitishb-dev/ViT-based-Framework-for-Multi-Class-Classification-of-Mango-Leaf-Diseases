@@ -1,12 +1,65 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   ArrowPathIcon,
   PhotoIcon,
-} from "@heroicons/react/24/solid";
-// IMPORTANT: Update this URL if your FastAPI backend is running elsewhere
+  CloudArrowUpIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+
 const API_URL = "http://127.0.0.1:8000";
+
+const diseaseInfo = {
+  "Healthy": {
+    color: "emerald",
+    icon: "✅",
+    description: "No disease detected. The leaf appears healthy.",
+    recommendation: "Continue regular care and monitoring."
+  },
+  "Anthracnose": {
+    color: "red",
+    icon: "🔴",
+    description: "Fungal disease causing dark lesions on leaves and fruits.",
+    recommendation: "Apply fungicide and improve air circulation."
+  },
+  "Bacterial Canker": {
+    color: "orange",
+    icon: "🟠",
+    description: "Bacterial infection causing cankers and leaf spots.",
+    recommendation: "Remove affected parts and apply copper-based treatment."
+  },
+  "Cutting Weevil": {
+    color: "yellow",
+    icon: "🟡",
+    description: "Pest damage from weevil larvae cutting through leaves.",
+    recommendation: "Use integrated pest management strategies."
+  },
+  "Die Back": {
+    color: "purple",
+    icon: "🟣",
+    description: "Progressive dying of shoots and branches.",
+    recommendation: "Prune affected areas and improve plant nutrition."
+  },
+  "Gall Midge": {
+    color: "pink",
+    icon: "🔵",
+    description: "Insect pest causing galls on leaves and shoots.",
+    recommendation: "Apply appropriate insecticide during active periods."
+  },
+  "Powdery Mildew": {
+    color: "gray",
+    icon: "⚪",
+    description: "Fungal disease creating white powdery coating.",
+    recommendation: "Improve air circulation and apply fungicide."
+  },
+  "Sooty Mould": {
+    color: "slate",
+    icon: "⚫",
+    description: "Black fungal growth on leaf surfaces.",
+    recommendation: "Control honeydew-producing insects first."
+  }
+};
 
 const Predictor = () => {
   const [file, setFile] = useState(null);
@@ -14,17 +67,47 @@ const Predictor = () => {
   const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
-    const uploadedFile = e.target.files && e.target.files[0];
-    if (uploadedFile) {
+  const handleFileChange = useCallback((uploadedFile) => {
+    if (uploadedFile && uploadedFile.type.startsWith('image/')) {
       setFile(uploadedFile);
       setPreviewUrl(URL.createObjectURL(uploadedFile));
-      setPrediction(null); // Reset prediction on new file
+      setPrediction(null);
       setError(null);
+    } else {
+      setError("Please select a valid image file.");
+    }
+  }, []);
+
+  const handleInputChange = (e) => {
+    const uploadedFile = e.target.files?.[0];
+    if (uploadedFile) {
+      handleFileChange(uploadedFile);
     }
   };
+
+  const handleDrag = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    const uploadedFile = e.dataTransfer.files?.[0];
+    if (uploadedFile) {
+      handleFileChange(uploadedFile);
+    }
+  }, [handleFileChange]);
 
   const handleReset = () => {
     setFile(null);
@@ -59,11 +142,9 @@ const Predictor = () => {
       if (response.ok) {
         setPrediction(data.class);
       } else {
-        // Handle FastAPI-level errors (e.g., file not an image, processing failed)
         setError(data.error || "An unknown error occurred during prediction.");
       }
     } catch (e) {
-      // Handle network or CORS errors
       setError(
         "Could not connect to the backend API. Please ensure the server is running."
       );
@@ -73,124 +154,181 @@ const Predictor = () => {
     }
   };
 
+  const predictionData = prediction ? diseaseInfo[prediction] : null;
+
   return (
-    <div className="p-6 sm:p-8 w-full max-w-7xl mx-auto bg-gradient-to-br from-green-50 to-green-100 rounded-2xl shadow-xl animate-fade-in-up">
-      <h2 className="text-4xl md:text-5xl font-extrabold text-gray-800 mb-8 text-center">
-        Diagnose Your Mango Leaf
-      </h2>
-
-      <div className="grid md:grid-cols-2 gap-8 items-start">
-        {/* Left: Image Upload and Preview */}
-        <div className="bg-white p-6 rounded-xl shadow-lg space-y-6">
-          <h3 className="text-2xl font-bold text-gray-800">1. Upload Image</h3>
-
-          <div className="mt-2 flex justify-center rounded-lg border-2 border-dashed border-gray-300 hover:border-green-400 transition-colors duration-300 px-6 py-10 bg-gray-50/50">
-            <div className="text-center">
-              {previewUrl ? (
-                <img
-                  src={previewUrl}
-                  alt="Leaf Preview"
-                  className="mx-auto h-48 w-auto object-contain rounded-md transition-all duration-300"
-                />
-              ) : (
-                <>
-                  <PhotoIcon
-                    className="mx-auto h-12 w-12 text-gray-400"
-                    aria-hidden="true"
-                  />
-                  <div className="mt-4 flex text-sm leading-6 text-gray-600">
-                    <label
-                      htmlFor="file-upload"
-                      className="relative cursor-pointer rounded-md bg-white font-semibold text-green-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-green-600 focus-within:ring-offset-2 hover:text-green-500"
-                    >
-                      <span>Upload a file</span>
-                      <input
-                        id="file-upload"
-                        name="file-upload"
-                        type="file"
-                        className="sr-only"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        ref={fileInputRef}
-                      />
-                    </label>
-                    <p className="pl-1">or drag and drop</p>
-                  </div>
-                  <p className="text-xs leading-5 text-gray-500">
-                    PNG, JPG, GIF up to 10MB
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleUpload}
-              disabled={loading || !file}
-              className="w-full flex-grow py-3 px-4 rounded-lg text-lg font-bold text-white transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:cursor-not-allowed disabled:bg-green-300 bg-green-600 hover:bg-green-700 shadow-md hover:shadow-lg disabled:shadow-none transform hover:-translate-y-0.5 disabled:transform-none"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <ArrowPathIcon className="animate-spin h-5 w-5 mr-3" />
-                  Processing...
-                </div>
-              ) : (
-                "2. Get Prediction"
-              )}
-            </button>
-            <button
-              onClick={handleReset}
-              className="py-3 px-4 rounded-lg font-bold text-gray-600 bg-gray-200 hover:bg-gray-300 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-gray-300"
-              aria-label="Reset"
-            >
-              Reset
-            </button>
-          </div>
+    <div className="py-20 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            AI Disease Diagnosis
+          </h2>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Upload a mango leaf image and get instant AI-powered disease classification 
+            with treatment recommendations.
+          </p>
         </div>
 
-        {/* Right: Prediction Result */}
-        <div className="bg-white p-6 rounded-xl shadow-lg flex flex-col justify-center min-h-[380px]">
-          <h3 className="text-2xl font-bold text-gray-800 mb-4">3. Result</h3>
+        <div className="max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Upload Section */}
+            <div className="bg-gray-50 rounded-2xl p-8">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">
+                Upload Leaf Image
+              </h3>
 
-          {error && (
-            <div className="p-4 bg-red-100 text-red-800 rounded-lg text-center font-medium flex items-center justify-center animate-fade-in-up">
-              <ExclamationTriangleIcon className="h-6 w-6 mr-2 text-red-600" />
-              <div>
-                <strong>Error:</strong> {error}
+              <div
+                className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
+                  dragActive
+                    ? "border-emerald-400 bg-emerald-50"
+                    : previewUrl
+                    ? "border-gray-200 bg-white"
+                    : "border-gray-300 hover:border-emerald-400 hover:bg-emerald-50"
+                }`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+              >
+                {previewUrl ? (
+                  <div className="relative">
+                    <img
+                      src={previewUrl}
+                      alt="Leaf Preview"
+                      className="mx-auto max-h-64 w-auto object-contain rounded-lg shadow-md"
+                    />
+                    <button
+                      onClick={handleReset}
+                      className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                      aria-label="Remove image"
+                    >
+                      <XMarkIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <CloudArrowUpIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                    <div className="mb-4">
+                      <label
+                        htmlFor="file-upload"
+                        className="cursor-pointer inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
+                      >
+                        Choose File
+                        <input
+                          id="file-upload"
+                          name="file-upload"
+                          type="file"
+                          className="sr-only"
+                          accept="image/*"
+                          onChange={handleInputChange}
+                          ref={fileInputRef}
+                        />
+                      </label>
+                    </div>
+                    <p className="text-gray-500 text-sm">
+                      or drag and drop your image here
+                    </p>
+                    <p className="text-gray-400 text-xs mt-2">
+                      PNG, JPG, JPEG up to 10MB
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleUpload}
+                disabled={loading || !file}
+                className="w-full mt-6 py-4 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <ArrowPathIcon className="animate-spin h-5 w-5 mr-3" />
+                    Analyzing Image...
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center">
+                    <PhotoIcon className="h-5 w-5 mr-3" />
+                    Get Diagnosis
+                  </div>
+                )}
+              </button>
+            </div>
+
+            {/* Results Section */}
+            <div className="bg-gray-50 rounded-2xl p-8">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">
+                Diagnosis Results
+              </h3>
+
+              <div className="min-h-[300px] flex items-center justify-center">
+                {error && (
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                      Analysis Failed
+                    </h4>
+                    <p className="text-red-600 text-sm">{error}</p>
+                  </div>
+                )}
+
+                {loading && !error && (
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <ArrowPathIcon className="animate-spin h-8 w-8 text-emerald-600" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                      Processing Image
+                    </h4>
+                    <p className="text-gray-600 text-sm">
+                      Our AI is analyzing the leaf features...
+                    </p>
+                  </div>
+                )}
+
+                {prediction && !loading && predictionData && (
+                  <div className="w-full">
+                    <div className="text-center mb-6">
+                      <div className={`w-16 h-16 bg-${predictionData.color}-100 rounded-full flex items-center justify-center mx-auto mb-4`}>
+                        <CheckCircleIcon className={`h-8 w-8 text-${predictionData.color}-600`} />
+                      </div>
+                      <h4 className="text-2xl font-bold text-gray-900 mb-2">
+                        {prediction}
+                      </h4>
+                      <div className="text-4xl mb-4">{predictionData.icon}</div>
+                    </div>
+
+                    <div className={`bg-${predictionData.color}-50 border border-${predictionData.color}-200 rounded-xl p-6`}>
+                      <h5 className="font-semibold text-gray-900 mb-2">Description</h5>
+                      <p className="text-gray-700 text-sm mb-4">
+                        {predictionData.description}
+                      </p>
+                      
+                      <h5 className="font-semibold text-gray-900 mb-2">Recommendation</h5>
+                      <p className={`text-${predictionData.color}-700 text-sm font-medium`}>
+                        {predictionData.recommendation}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {!prediction && !loading && !error && (
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <PhotoIcon className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                      Ready for Analysis
+                    </h4>
+                    <p className="text-gray-600 text-sm">
+                      Upload a mango leaf image to get started
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-          )}
-
-          {loading && !error && (
-            <div className="text-center py-10 animate-fade-in-up">
-              <ArrowPathIcon className="animate-spin h-10 w-10 text-green-600 mx-auto mb-4" />
-              <p className="text-green-600 font-medium">
-                Analyzing leaf features...
-              </p>
-            </div>
-          )}
-
-          {prediction && !loading && (
-            <div className="text-center p-6 border-4 border-green-400 rounded-lg bg-green-50 animate-fade-in-up">
-              <div className="flex items-center justify-center text-2xl font-bold text-gray-800 mb-2">
-                <CheckCircleIcon className="h-8 w-8 text-green-600 mr-2" />
-                Diagnosis Complete
-              </div>
-              <p className="text-5xl font-extrabold text-green-700 my-4">
-                {prediction}
-              </p>
-              <p className="text-lg text-gray-600 mt-2">
-                This is the most likely classification for the provided image.
-              </p>
-            </div>
-          )}
-
-          {!prediction && !loading && !error && (
-            <div className="text-center text-gray-400 py-10 animate-fade-in-up">
-              <p>Your diagnosis will appear here.</p>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

@@ -1,56 +1,39 @@
 import Navbar from "./components/Navbar";
-import Introduction from "./components/Introduction";
+import Hero from "./components/Hero";
 import About from "./components/About";
-import ProposedMethodology from "./components/ProposedMethodology";
-import Results from "./components/Results";
+import Methodology from "./components/ProposedMethodology";
 import Predictor from "./components/Predictor";
+import Results from "./components/Results";
+import Footer from "./components/Footer";
 
 function App() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-100 font-sans">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6">
-        {/* About Section */}
-        <section
-          id="about"
-          className="scroll-mt-24 min-h-screen flex items-center justify-center"
-        >
+      
+      <main>
+        <section id="home">
+          <Hero />
+        </section>
+        
+        <section id="about" className="scroll-mt-20">
           <About />
         </section>
-        {/* Introduction Section */}
-        <section
-          id="introduction"
-          className="scroll-mt-24 min-h-screen flex items-center justify-center"
-        >
-          <Introduction />
+        
+        <section id="methodology" className="scroll-mt-20">
+          <Methodology />
         </section>
-        {/* Proposed Methodology Section */}
-        <section
-          id="methodology"
-          className="scroll-mt-24 min-h-screen flex items-center justify-center"
-        >
-          <ProposedMethodology />
-        </section>
-        {/* Predictor/Main Results Section */}
-        <section
-          id="predict"
-          className="scroll-mt-24 min-h-screen flex items-center justify-center"
-        >
+        
+        <section id="predict" className="scroll-mt-20">
           <Predictor />
         </section>
-        {/* Results Section */}
-        <section
-          id="results"
-          className="scroll-mt-24 min-h-screen flex items-center justify-center"
-        >
+        
+        <section id="results" className="scroll-mt-20">
           <Results />
         </section>
       </main>
 
-      <footer className="py-4 text-center text-gray-500 border-t bg-white">
-        &copy; {new Date().getFullYear()} Mango Leaf Disease Classifier
-      </footer>
+      <Footer />
     </div>
   );
 }
