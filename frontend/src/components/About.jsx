@@ -9,7 +9,7 @@ import {
 const features = [
   {
     icon: CpuChipIcon,
-    title: "Advanced AI Model",
+    title: "ViT Model",
     description: "Swin Transformer with LoRA adaptation for superior accuracy and efficiency in disease detection."
   },
   {

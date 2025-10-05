@@ -85,7 +85,7 @@ const Results = () => {
           ))}
         </div>
 
-        {/* Performance Breakdown */}
+        {/* Performance Breakdown
         <div className="bg-white rounded-2xl p-8 shadow-sm">
           <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">
             Per-Class Performance
@@ -154,10 +154,10 @@ const Results = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Key Achievements */}
-        <div className="mt-16 grid md:grid-cols-3 gap-8">
+        {/* <div className="mt-16 grid md:grid-cols-3 gap-8">
           <div className="text-center">
             <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl">🎯</span>
@@ -193,7 +193,7 @@ const Results = () => {
               Validated on comprehensive dataset with rigorous testing
             </p>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
