@@ -8,7 +8,9 @@
 
 An advanced AI-powered web application for real-time mango leaf disease classification using state-of-the-art deep learning techniques. Built with Swin Transformer architecture and LoRA adaptation for superior accuracy and efficiency.
 
-![MangoLeaf AI Demo](https://via.placeholder.com/800x400/10b981/ffffff?text=MangoLeaf+AI+Demo)
+<img width="940" height="438" alt="image" src="https://github.com/user-attachments/assets/334a4fe4-6a1f-4976-9da3-b3f5923bb21f" />
+
+<img width="940" height="531" alt="image" src="https://github.com/user-attachments/assets/4b4870d4-04cd-4c77-be60-396f0c34126e" />
 
 ## 🌟 Features
 
