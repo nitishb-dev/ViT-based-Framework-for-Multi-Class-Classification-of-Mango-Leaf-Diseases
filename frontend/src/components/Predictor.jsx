@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -6,85 +6,72 @@ import {
   PhotoIcon,
   CloudArrowUpIcon,
   XMarkIcon,
+  DocumentArrowDownIcon,
 } from "@heroicons/react/24/outline";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 const API_URL = "http://127.0.0.1:8000";
 
-const diseaseInfo = {
-  "Healthy": {
-    color: "emerald",
-    icon: "✅",
-    description: "No disease detected. The leaf appears healthy.",
-    recommendation: "Continue regular care and monitoring."
-  },
-  "Anthracnose": {
-    color: "red",
-    icon: "🔴",
-    description: "Fungal disease causing dark lesions on leaves and fruits.",
-    recommendation: "Apply fungicide and improve air circulation."
-  },
-  "Bacterial Canker": {
-    color: "orange",
-    icon: "🟠",
-    description: "Bacterial infection causing cankers and leaf spots.",
-    recommendation: "Remove affected parts and apply copper-based treatment."
-  },
-  "Cutting Weevil": {
-    color: "yellow",
-    icon: "🟡",
-    description: "Pest damage from weevil larvae cutting through leaves.",
-    recommendation: "Use integrated pest management strategies."
-  },
-  "Die Back": {
-    color: "purple",
-    icon: "🟣",
-    description: "Progressive dying of shoots and branches.",
-    recommendation: "Prune affected areas and improve plant nutrition."
-  },
-  "Gall Midge": {
-    color: "pink",
-    icon: "🔵",
-    description: "Insect pest causing galls on leaves and shoots.",
-    recommendation: "Apply appropriate insecticide during active periods."
-  },
-  "Powdery Mildew": {
-    color: "gray",
-    icon: "⚪",
-    description: "Fungal disease creating white powdery coating.",
-    recommendation: "Improve air circulation and apply fungicide."
-  },
-  "Sooty Mould": {
-    color: "slate",
-    icon: "⚫",
-    description: "Black fungal growth on leaf surfaces.",
-    recommendation: "Control honeydew-producing insects first."
-  }
+const diseaseColors = {
+  "Healthy": "emerald",
+  "Anthracnose": "red",
+  "Bacterial Canker": "orange",
+  "Cutting Weevil": "yellow",
+  "Die Back": "purple",
+  "Gall Midge": "pink",
+  "Powdery Mildew": "gray",
+  "Sooty Mould": "slate",
+  "Not a Mango Leaf": "gray"
+};
+
+const diseaseIcons = {
+  "Healthy": "✅",
+  "Anthracnose": "🔴",
+  "Bacterial Canker": "🟠",
+  "Cutting Weevil": "🟡",
+  "Die Back": "🟣",
+  "Gall Midge": "🔵",
+  "Powdery Mildew": "⚪",
+  "Sooty Mould": "⚫",
+  "Not a Mango Leaf": "⚠️"
 };
 
 const Predictor = () => {
-  const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [prediction, setPrediction] = useState(null);
+  const [files, setFiles] = useState([]);
+  const [previewUrls, setPreviewUrls] = useState([]);
+  const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
+  const resultsRef = useRef(null);
 
-  const handleFileChange = useCallback((uploadedFile) => {
-    if (uploadedFile && uploadedFile.type.startsWith('image/')) {
-      setFile(uploadedFile);
-      setPreviewUrl(URL.createObjectURL(uploadedFile));
-      setPrediction(null);
-      setError(null);
-    } else {
-      setError("Please select a valid image file.");
+  const handleFileChange = useCallback((uploadedFiles) => {
+    const validFiles = Array.from(uploadedFiles).filter(file => 
+      file.type.startsWith('image/')
+    ).slice(0, 10); // Limit to 10 images
+
+    if (validFiles.length === 0) {
+      setError("Please select valid image files.");
+      return;
     }
+
+    if (uploadedFiles.length > 10) {
+      setError("Maximum 10 images allowed. Only first 10 will be processed.");
+    }
+
+    setFiles(validFiles);
+    const urls = validFiles.map(file => URL.createObjectURL(file));
+    setPreviewUrls(urls);
+    setPredictions([]);
+    setError(null);
   }, []);
 
   const handleInputChange = (e) => {
-    const uploadedFile = e.target.files?.[0];
-    if (uploadedFile) {
-      handleFileChange(uploadedFile);
+    const uploadedFiles = e.target.files;
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      handleFileChange(uploadedFiles);
     }
   };
 
@@ -103,36 +90,55 @@ const Predictor = () => {
     e.stopPropagation();
     setDragActive(false);
     
-    const uploadedFile = e.dataTransfer.files?.[0];
-    if (uploadedFile) {
-      handleFileChange(uploadedFile);
+    const uploadedFiles = e.dataTransfer.files;
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      handleFileChange(uploadedFiles);
     }
   }, [handleFileChange]);
 
   const handleReset = () => {
-    setFile(null);
-    setPreviewUrl(null);
-    setPrediction(null);
+    // Clean up preview URLs
+    previewUrls.forEach(url => URL.revokeObjectURL(url));
+    
+    setFiles([]);
+    setPreviewUrls([]);
+    setPredictions([]);
     setLoading(false);
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const removeImage = (index) => {
+    URL.revokeObjectURL(previewUrls[index]);
+    
+    const newFiles = files.filter((_, i) => i !== index);
+    const newUrls = previewUrls.filter((_, i) => i !== index);
+    
+    setFiles(newFiles);
+    setPreviewUrls(newUrls);
+    
+    if (newFiles.length === 0) {
+      handleReset();
+    }
+  };
+
   const handleUpload = async () => {
-    if (!file) {
-      setError("Please select an image file first.");
+    if (files.length === 0) {
+      setError("Please select at least one image file.");
       return;
     }
 
     setLoading(true);
-    setPrediction(null);
+    setPredictions([]);
     setError(null);
 
     const formData = new FormData();
-    formData.append("file", file);
+    files.forEach(file => {
+      formData.append("files", file);
+    });
 
     try {
-      const response = await fetch(`${API_URL}/predict`, {
+      const response = await fetch(`${API_URL}/predict/batch`, {
         method: "POST",
         body: formData,
       });
@@ -140,7 +146,14 @@ const Predictor = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setPrediction(data.class);
+        setPredictions(data.predictions || []);
+        if (data.failed > 0) {
+          setError(`${data.failed} image(s) failed to process. Check individual results.`);
+        }
+        // Scroll to results after a short delay to ensure rendering
+        setTimeout(() => {
+          resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
       } else {
         setError(data.error || "An unknown error occurred during prediction.");
       }
@@ -154,7 +167,139 @@ const Predictor = () => {
     }
   };
 
-  const predictionData = prediction ? diseaseInfo[prediction] : null;
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let yPosition = 20;
+
+    // Title
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("Mango Leaf Disease Analysis Report", pageWidth / 2, yPosition, { align: "center" });
+    
+    yPosition += 10;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, yPosition, { align: "center" });
+    doc.text(`Total Images Analyzed: ${predictions.length}`, pageWidth / 2, yPosition + 5, { align: "center" });
+    
+    yPosition += 20;
+
+    predictions.forEach((pred, index) => {
+      // Check if we need a new page
+      if (yPosition > pageHeight - 60) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      // Image header
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Image ${index + 1}: ${pred.filename}`, 14, yPosition);
+      yPosition += 8;
+
+      if (pred.success) {
+        // Classification result
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Disease: ${pred.class}`, 14, yPosition);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Confidence: ${pred.confidence}%`, 14, yPosition + 6);
+        doc.text(`Status: ${pred.is_mango_leaf ? "Valid Mango Leaf" : "Not a Mango Leaf"}`, 14, yPosition + 12);
+        yPosition += 20;
+
+        if (pred.details) {
+          // Description
+          doc.setFontSize(11);
+          doc.setFont("helvetica", "bold");
+          doc.text("Description:", 14, yPosition);
+          yPosition += 6;
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9);
+          const descLines = doc.splitTextToSize(pred.details.description, pageWidth - 28);
+          doc.text(descLines, 14, yPosition);
+          yPosition += descLines.length * 4 + 6;
+
+          // Check if we need a new page
+          if (yPosition > pageHeight - 80) {
+            doc.addPage();
+            yPosition = 20;
+          }
+
+          // Symptoms
+          if (pred.details.symptoms && pred.details.symptoms.length > 0) {
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.text("Symptoms:", 14, yPosition);
+            yPosition += 6;
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            pred.details.symptoms.forEach(symptom => {
+              if (yPosition > pageHeight - 20) {
+                doc.addPage();
+                yPosition = 20;
+              }
+              doc.text(`• ${symptom}`, 18, yPosition);
+              yPosition += 5;
+            });
+            yPosition += 4;
+          }
+
+          // Check if we need a new page
+          if (yPosition > pageHeight - 60) {
+            doc.addPage();
+            yPosition = 20;
+          }
+
+          // Treatment
+          doc.setFontSize(11);
+          doc.setFont("helvetica", "bold");
+          doc.text("Treatment:", 14, yPosition);
+          yPosition += 6;
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9);
+          const treatmentLines = doc.splitTextToSize(pred.details.treatment, pageWidth - 28);
+          doc.text(treatmentLines, 14, yPosition);
+          yPosition += treatmentLines.length * 4 + 6;
+
+          // Check if we need a new page
+          if (yPosition > pageHeight - 60) {
+            doc.addPage();
+            yPosition = 20;
+          }
+
+          // Prevention
+          doc.setFontSize(11);
+          doc.setFont("helvetica", "bold");
+          doc.text("Prevention:", 14, yPosition);
+          yPosition += 6;
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9);
+          const preventionLines = doc.splitTextToSize(pred.details.prevention, pageWidth - 28);
+          doc.text(preventionLines, 14, yPosition);
+          yPosition += preventionLines.length * 4 + 10;
+        }
+      } else {
+        // Error message
+        doc.setFontSize(10);
+        doc.setTextColor(255, 0, 0);
+        doc.text(`Error: ${pred.error}`, 14, yPosition);
+        doc.setTextColor(0, 0, 0);
+        yPosition += 15;
+      }
+
+      // Separator line
+      if (index < predictions.length - 1) {
+        doc.setDrawColor(200, 200, 200);
+        doc.line(14, yPosition, pageWidth - 14, yPosition);
+        yPosition += 10;
+      }
+    });
+
+    // Save the PDF
+    doc.save(`mango-leaf-analysis-${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   return (
     <div className="py-20 bg-white">
@@ -164,171 +309,267 @@ const Predictor = () => {
             Disease Diagnosis
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Upload a mango leaf image and get instant AI-powered disease classification 
-            with treatment recommendations.
+            Upload one or multiple mango leaf images (up to 10) and get instant AI-powered 
+            disease classification with detailed treatment recommendations.
           </p>
         </div>
 
         <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Upload Section */}
-            <div className="bg-gray-50 rounded-2xl p-8">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">
-                Upload Leaf Image
-              </h3>
+          {/* Upload Section */}
+          <div className="bg-gray-50 rounded-2xl p-8 mb-8">
+            <h3 className="text-xl font-semibold text-gray-900 mb-6">
+              Upload Leaf Images
+            </h3>
 
-              <div
-                className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
-                  dragActive
-                    ? "border-emerald-400 bg-emerald-50"
-                    : previewUrl
-                    ? "border-gray-200 bg-white"
-                    : "border-gray-300 hover:border-emerald-400 hover:bg-emerald-50"
-                }`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-              >
-                {previewUrl ? (
-                  <div className="relative">
-                    <img
-                      src={previewUrl}
-                      alt="Leaf Preview"
-                      className="mx-auto max-h-64 w-auto object-contain rounded-lg shadow-md"
-                    />
-                    <button
-                      onClick={handleReset}
-                      className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                      aria-label="Remove image"
-                    >
-                      <XMarkIcon className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <CloudArrowUpIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-                    <div className="mb-4">
-                      <label
-                        htmlFor="file-upload"
-                        className="cursor-pointer inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
-                      >
-                        Choose File
-                        <input
-                          id="file-upload"
-                          name="file-upload"
-                          type="file"
-                          className="sr-only"
-                          accept="image/*"
-                          onChange={handleInputChange}
-                          ref={fileInputRef}
+            <div
+              className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
+                dragActive
+                  ? "border-emerald-400 bg-emerald-50"
+                  : previewUrls.length > 0
+                  ? "border-gray-200 bg-white"
+                  : "border-gray-300 hover:border-emerald-400 hover:bg-emerald-50"
+              }`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+            >
+              {previewUrls.length > 0 ? (
+                <div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-4">
+                    {previewUrls.map((url, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={url}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg shadow-md"
                         />
-                      </label>
-                    </div>
-                    <p className="text-gray-500 text-sm">
-                      or drag and drop your image here
-                    </p>
-                    <p className="text-gray-400 text-xs mt-2">
-                      PNG, JPG, JPEG up to 10MB
-                    </p>
+                        <button
+                          onClick={() => removeImage(index)}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                          aria-label="Remove image"
+                        >
+                          <XMarkIcon className="w-4 h-4" />
+                        </button>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-lg truncate">
+                          {files[index]?.name}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                )}
-              </div>
+                  <button
+                    onClick={handleReset}
+                    className="text-sm text-red-600 hover:text-red-700 font-medium"
+                  >
+                    Clear All Images
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <CloudArrowUpIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                  <div className="mb-4">
+                    <label
+                      htmlFor="file-upload"
+                      className="cursor-pointer inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
+                    >
+                      Choose Files
+                      <input
+                        id="file-upload"
+                        name="file-upload"
+                        type="file"
+                        className="sr-only"
+                        accept="image/*"
+                        multiple
+                        onChange={handleInputChange}
+                        ref={fileInputRef}
+                      />
+                    </label>
+                  </div>
+                  <p className="text-gray-500 text-sm">
+                    or drag and drop your images here
+                  </p>
+                  <p className="text-gray-400 text-xs mt-2">
+                    PNG, JPG, JPEG up to 10MB each (max 10 images)
+                  </p>
+                </div>
+              )}
+            </div>
 
+            <div className="mt-6">
               <button
                 onClick={handleUpload}
-                disabled={loading || !file}
-                className="w-full mt-6 py-4 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
+                disabled={loading || files.length === 0}
+                className="w-full py-4 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
               >
                 {loading ? (
                   <div className="flex items-center justify-center">
                     <ArrowPathIcon className="animate-spin h-5 w-5 mr-3" />
-                    Analyzing Image...
+                    Analyzing {files.length} Image{files.length > 1 ? 's' : ''}...
                   </div>
                 ) : (
                   <div className="flex items-center justify-center">
                     <PhotoIcon className="h-5 w-5 mr-3" />
-                    Get Diagnosis
+                    Analyze {files.length} Image{files.length > 1 ? 's' : ''}
                   </div>
                 )}
               </button>
             </div>
 
-            {/* Results Section */}
-            <div className="bg-gray-50 rounded-2xl p-8">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">
-                Diagnosis Results
+            {error && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Results Section */}
+          {predictions.length > 0 && (
+            <div ref={resultsRef} className="space-y-6">
+              <h3 className="text-2xl font-semibold text-gray-900">
+                Analysis Results ({predictions.length} image{predictions.length > 1 ? 's' : ''})
               </h3>
 
-              <div className="min-h-[300px] flex items-center justify-center">
-                {error && (
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                      Analysis Failed
-                    </h4>
-                    <p className="text-red-600 text-sm">{error}</p>
-                  </div>
-                )}
-
-                {loading && !error && (
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <ArrowPathIcon className="animate-spin h-8 w-8 text-emerald-600" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                      Processing Image
-                    </h4>
-                    <p className="text-gray-600 text-sm">
-                      Our AI is analyzing the leaf features...
-                    </p>
-                  </div>
-                )}
-
-                {prediction && !loading && predictionData && (
-                  <div className="w-full">
-                    <div className="text-center mb-6">
-                      <div className={`w-16 h-16 bg-${predictionData.color}-100 rounded-full flex items-center justify-center mx-auto mb-4`}>
-                        <CheckCircleIcon className={`h-8 w-8 text-${predictionData.color}-600`} />
-                      </div>
-                      <h4 className="text-2xl font-bold text-gray-900 mb-2">
-                        {prediction}
-                      </h4>
-                      <div className="text-4xl mb-4">{predictionData.icon}</div>
-                    </div>
-
-                    <div className={`bg-${predictionData.color}-50 border border-${predictionData.color}-200 rounded-xl p-6`}>
-                      <h5 className="font-semibold text-gray-900 mb-2">Description</h5>
-                      <p className="text-gray-700 text-sm mb-4">
-                        {predictionData.description}
-                      </p>
-                      
-                      <h5 className="font-semibold text-gray-900 mb-2">Recommendation</h5>
-                      <p className={`text-${predictionData.color}-700 text-sm font-medium`}>
-                        {predictionData.recommendation}
+              {predictions.map((pred, index) => (
+                <div key={index} className="bg-gray-50 rounded-2xl p-6 shadow-sm">
+                  <div className="flex items-start gap-6">
+                    {/* Image Preview */}
+                    <div className="flex-shrink-0">
+                      <img
+                        src={previewUrls[index]}
+                        alt={pred.filename}
+                        className="w-32 h-32 object-cover rounded-lg shadow-md"
+                      />
+                      <p className="text-xs text-gray-600 mt-2 text-center truncate w-32">
+                        {pred.filename}
                       </p>
                     </div>
-                  </div>
-                )}
 
-                {!prediction && !loading && !error && (
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <PhotoIcon className="h-8 w-8 text-gray-400" />
+                    {/* Results */}
+                    <div className="flex-1">
+                      {pred.success ? (
+                        <div>
+                          {/* Warning banner for non-mango leaf */}
+                          {!pred.is_mango_leaf && (
+                            <div className="mb-4 p-4 bg-orange-50 border-l-4 border-orange-500 rounded">
+                              <div className="flex items-center">
+                                <ExclamationTriangleIcon className="h-6 w-6 text-orange-500 mr-3" />
+                                <div>
+                                  <h5 className="font-semibold text-orange-800">Warning: Not a Mango Leaf</h5>
+                                  <p className="text-sm text-orange-700">
+                                    This image does not appear to be a mango leaf or the confidence is too low for accurate classification.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className={`w-12 h-12 ${pred.is_mango_leaf ? `bg-${diseaseColors[pred.class]}-100` : 'bg-orange-100'} rounded-full flex items-center justify-center`}>
+                              <span className="text-2xl">{diseaseIcons[pred.class]}</span>
+                            </div>
+                            <div>
+                              <h4 className="text-xl font-bold text-gray-900">{pred.class}</h4>
+                              <p className="text-sm text-gray-600">
+                                Confidence: <span className="font-semibold">{pred.confidence}%</span>
+                              </p>
+                            </div>
+                          </div>
+
+                          {pred.details && pred.is_mango_leaf && (
+                            <div className="space-y-4">
+                              {/* Description */}
+                              <div>
+                                <h5 className="font-semibold text-gray-900 mb-2">Description</h5>
+                                <p className="text-gray-700 text-sm leading-relaxed">
+                                  {pred.details.description}
+                                </p>
+                              </div>
+
+                              {/* Symptoms */}
+                              {pred.details.symptoms && pred.details.symptoms.length > 0 && (
+                                <div>
+                                  <h5 className="font-semibold text-gray-900 mb-2">Symptoms</h5>
+                                  <ul className="list-disc list-inside text-gray-700 text-sm space-y-1">
+                                    {pred.details.symptoms.slice(0, 4).map((symptom, i) => (
+                                      <li key={i}>{symptom}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {/* Treatment Summary */}
+                              <div>
+                                <h5 className="font-semibold text-gray-900 mb-2">Treatment Recommendation</h5>
+                                <p className="text-gray-700 text-sm leading-relaxed line-clamp-3">
+                                  {pred.details.treatment}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Show guidance for non-mango leaf */}
+                          {pred.details && !pred.is_mango_leaf && (
+                            <div className="space-y-4">
+                              <div>
+                                <h5 className="font-semibold text-gray-900 mb-2">Recommendation</h5>
+                                <p className="text-gray-700 text-sm leading-relaxed">
+                                  {pred.details.description}
+                                </p>
+                              </div>
+                              <div>
+                                <h5 className="font-semibold text-gray-900 mb-2">How to Get Better Results</h5>
+                                <p className="text-gray-700 text-sm leading-relaxed">
+                                  {pred.details.treatment}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                            <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
+                          </div>
+                          <div>
+                            <h4 className="text-lg font-semibold text-gray-900">Processing Failed</h4>
+                            <p className="text-red-600 text-sm">{pred.error}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                      Ready for Analysis
-                    </h4>
-                    <p className="text-gray-600 text-sm">
-                      Upload a mango leaf image to get started
-                    </p>
                   </div>
-                )}
+                </div>
+              ))}
+
+              {/* Export Button at Bottom */}
+              <div className="flex justify-center pt-4">
+                <button
+                  onClick={exportToPDF}
+                  className="py-4 px-8 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                >
+                  <div className="flex items-center justify-center">
+                    <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
+                    Export PDF Report
+                  </div>
+                </button>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Empty State */}
+          {predictions.length === 0 && !loading && files.length === 0 && (
+            <div className="bg-gray-50 rounded-2xl p-12 text-center">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <PhotoIcon className="h-8 w-8 text-gray-400" />
+              </div>
+              <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                Ready for Analysis
+              </h4>
+              <p className="text-gray-600 text-sm">
+                Upload mango leaf images to get started with disease diagnosis
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -337,348 +578,4 @@ const Predictor = () => {
 
 export default Predictor;
 
-// import React, { useState, useRef, useCallback } from "react";
-// import {
-//   CheckCircleIcon,
-//   ExclamationTriangleIcon,
-//   ArrowPathIcon,
-//   PhotoIcon,
-//   CloudArrowUpIcon,
-//   XMarkIcon,
-// } from "@heroicons/react/24/outline";
 
-// const API_URL = "http://127.0.0.1:8000";
-
-// const diseaseInfo = {
-//   Healthy: {
-//     color: "emerald",
-//     icon: "✅",
-//     description: "No disease detected. The leaf appears healthy.",
-//     recommendation: "Continue regular care and monitoring.",
-//   },
-//   Anthracnose: {
-//     color: "red",
-//     icon: "🔴",
-//     description: "Fungal disease causing dark lesions on leaves and fruits.",
-//     recommendation: "Apply fungicide and improve air circulation.",
-//   },
-//   "Bacterial Canker": {
-//     color: "orange",
-//     icon: "🟠",
-//     description: "Bacterial infection causing cankers and leaf spots.",
-//     recommendation: "Remove affected parts and apply copper-based treatment.",
-//   },
-//   "Cutting Weevil": {
-//     color: "yellow",
-//     icon: "🟡",
-//     description: "Pest damage from weevil larvae cutting through leaves.",
-//     recommendation: "Use integrated pest management strategies.",
-//   },
-//   "Die Back": {
-//     color: "purple",
-//     icon: "🟣",
-//     description: "Progressive dying of shoots and branches.",
-//     recommendation: "Prune affected areas and improve plant nutrition.",
-//   },
-//   "Gall Midge": {
-//     color: "pink",
-//     icon: "🔵",
-//     description: "Insect pest causing galls on leaves and shoots.",
-//     recommendation: "Apply appropriate insecticide during active periods.",
-//   },
-//   "Powdery Mildew": {
-//     color: "gray",
-//     icon: "⚪",
-//     description: "Fungal disease creating white powdery coating.",
-//     recommendation: "Improve air circulation and apply fungicide.",
-//   },
-//   "Sooty Mould": {
-//     color: "slate",
-//     icon: "⚫",
-//     description: "Black fungal growth on leaf surfaces.",
-//     recommendation: "Control honeydew-producing insects first.",
-//   },
-// };
-
-// const Predictor = () => {
-//   const [files, setFiles] = useState([]);
-//   const [previews, setPreviews] = useState([]);
-//   const [predictions, setPredictions] = useState([]);
-//   const [loading, setLoading] = useState(false);
-//   const [error, setError] = useState(null);
-//   const [dragActive, setDragActive] = useState(false);
-//   const fileInputRef = useRef(null);
-
-//   const handleFileChange = useCallback((uploadedFiles) => {
-//     const validFiles = Array.from(uploadedFiles).filter((f) =>
-//       f.type.startsWith("image/")
-//     );
-//     if (validFiles.length > 0) {
-//       setFiles(validFiles);
-//       setPreviews(validFiles.map((f) => URL.createObjectURL(f)));
-//       setPredictions([]);
-//       setError(null);
-//     } else {
-//       setError("Please select valid image files.");
-//     }
-//   }, []);
-
-//   const handleInputChange = (e) => {
-//     if (e.target.files?.length) {
-//       handleFileChange(e.target.files);
-//     }
-//   };
-
-//   const handleDrag = useCallback((e) => {
-//     e.preventDefault();
-//     e.stopPropagation();
-//     if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
-//     else if (e.type === "dragleave") setDragActive(false);
-//   }, []);
-
-//   const handleDrop = useCallback(
-//     (e) => {
-//       e.preventDefault();
-//       e.stopPropagation();
-//       setDragActive(false);
-//       if (e.dataTransfer.files?.length) handleFileChange(e.dataTransfer.files);
-//     },
-//     [handleFileChange]
-//   );
-
-//   const handleReset = () => {
-//     setFiles([]);
-//     setPreviews([]);
-//     setPredictions([]);
-//     setLoading(false);
-//     setError(null);
-//     if (fileInputRef.current) fileInputRef.current.value = "";
-//   };
-
-//   const handleUpload = async () => {
-//     if (!files.length) {
-//       setError("Please select at least one image file.");
-//       return;
-//     }
-
-//     setLoading(true);
-//     setPredictions([]);
-//     setError(null);
-
-//     const formData = new FormData();
-//     files.forEach((f) => formData.append("files", f));
-
-//     try {
-//       const response = await fetch(`${API_URL}/predict`, {
-//         method: "POST",
-//         body: formData,
-//       });
-//       const data = await response.json();
-
-//       if (response.ok) {
-//         setPredictions(data.predictions);
-//       } else {
-//         setError(data.error || "An unknown error occurred during prediction.");
-//       }
-//     } catch (e) {
-//       setError(
-//         "Could not connect to the backend API. Please ensure the server is running."
-//       );
-//       console.error("Fetch error:", e);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   return (
-//     <div className="py-20 bg-white">
-//       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-//         <div className="text-center mb-12">
-//           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-//             Disease Diagnosis
-//           </h2>
-//           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-//             Upload one or more mango leaf images and get instant AI-powered disease
-//             classification with treatment recommendations.
-//           </p>
-//         </div>
-
-//         <div className="max-w-6xl mx-auto">
-//           <div className="grid lg:grid-cols-2 gap-8">
-//             {/* Upload Section */}
-//             <div className="bg-gray-50 rounded-2xl p-8">
-//               <h3 className="text-xl font-semibold text-gray-900 mb-6">
-//                 Upload Leaf Image(s)
-//               </h3>
-
-//               <div
-//                 className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
-//                   dragActive
-//                     ? "border-emerald-400 bg-emerald-50"
-//                     : previews.length
-//                     ? "border-gray-200 bg-white"
-//                     : "border-gray-300 hover:border-emerald-400 hover:bg-emerald-50"
-//                 }`}
-//                 onDragEnter={handleDrag}
-//                 onDragLeave={handleDrag}
-//                 onDragOver={handleDrag}
-//                 onDrop={handleDrop}
-//               >
-//                 {previews.length > 0 ? (
-//                   <div className="flex flex-wrap gap-4 justify-center">
-//                     {previews.map((p, idx) => (
-//                       <div key={idx} className="relative">
-//                         <img
-//                           src={p}
-//                           alt={`Preview ${idx}`}
-//                           className="h-32 w-32 object-contain rounded-lg shadow-md"
-//                         />
-//                       </div>
-//                     ))}
-//                     <button
-//                       onClick={handleReset}
-//                       className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-//                       aria-label="Remove all images"
-//                     >
-//                       <XMarkIcon className="w-4 h-4" />
-//                     </button>
-//                   </div>
-//                 ) : (
-//                   <div>
-//                     <CloudArrowUpIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-//                     <div className="mb-4">
-//                       <label
-//                         htmlFor="file-upload"
-//                         className="cursor-pointer inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
-//                       >
-//                         Choose Files
-//                         <input
-//                           id="file-upload"
-//                           name="file-upload"
-//                           type="file"
-//                           className="sr-only"
-//                           accept="image/*"
-//                           multiple
-//                           onChange={handleInputChange}
-//                           ref={fileInputRef}
-//                         />
-//                       </label>
-//                     </div>
-//                     <p className="text-gray-500 text-sm">
-//                       or drag and drop your images here
-//                     </p>
-//                     <p className="text-gray-400 text-xs mt-2">
-//                       PNG, JPG, JPEG up to 10MB each
-//                     </p>
-//                   </div>
-//                 )}
-//               </div>
-
-//               <button
-//                 onClick={handleUpload}
-//                 disabled={loading || !files.length}
-//                 className="w-full mt-6 py-4 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
-//               >
-//                 {loading ? (
-//                   <div className="flex items-center justify-center">
-//                     <ArrowPathIcon className="animate-spin h-5 w-5 mr-3" />
-//                     Analyzing Images...
-//                   </div>
-//                 ) : (
-//                   <div className="flex items-center justify-center">
-//                     <PhotoIcon className="h-5 w-5 mr-3" />
-//                     Get Diagnosis
-//                   </div>
-//                 )}
-//               </button>
-//             </div>
-
-//             {/* Results Section */}
-//             <div className="bg-gray-50 rounded-2xl p-8">
-//               <h3 className="text-xl font-semibold text-gray-900 mb-6">
-//                 Diagnosis Results
-//               </h3>
-
-//               <div className="min-h-[300px] flex flex-col gap-6 items-center justify-start">
-//                 {error && (
-//                   <div className="text-center">
-//                     <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-//                       <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
-//                     </div>
-//                     <h4 className="text-lg font-semibold text-gray-900 mb-2">
-//                       Analysis Failed
-//                     </h4>
-//                     <p className="text-red-600 text-sm">{error}</p>
-//                   </div>
-//                 )}
-
-//                 {loading && !error && (
-//                   <div className="text-center">
-//                     <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-//                       <ArrowPathIcon className="animate-spin h-8 w-8 text-emerald-600" />
-//                     </div>
-//                     <h4 className="text-lg font-semibold text-gray-900 mb-2">
-//                       Processing Images
-//                     </h4>
-//                     <p className="text-gray-600 text-sm">
-//                       Our AI is analyzing the leaf features...
-//                     </p>
-//                   </div>
-//                 )}
-
-//                 {!loading &&
-//                   !error &&
-//                   predictions.length === 0 && (
-//                     <div className="text-center">
-//                       <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-//                         <PhotoIcon className="h-8 w-8 text-gray-400" />
-//                       </div>
-//                       <h4 className="text-lg font-semibold text-gray-900 mb-2">
-//                         Ready for Analysis
-//                       </h4>
-//                       <p className="text-gray-600 text-sm">
-//                         Upload mango leaf image(s) to get started
-//                       </p>
-//                     </div>
-//                   )}
-
-//                 {!loading &&
-//                   !error &&
-//                   predictions.map((pred, idx) => {
-//                     const info = diseaseInfo[pred.class];
-//                     return (
-//                       <div
-//                         key={idx}
-//                         className={`w-full bg-${info.color}-50 border border-${info.color}-200 rounded-xl p-6`}
-//                       >
-//                         <div className="flex items-center justify-between mb-2">
-//                           <h4 className="text-lg font-semibold text-gray-900">
-//                             {pred.filename}
-//                           </h4>
-//                           <span className={`text-${info.color}-700 font-medium`}>
-//                             {pred.confidence.toFixed(2)}%
-//                           </span>
-//                         </div>
-//                         <div className="flex items-center mb-3 text-xl">
-//                           <span className="mr-2">{info.icon}</span>
-//                           <span className="font-semibold text-gray-800">
-//                             {pred.class}
-//                           </span>
-//                         </div>
-//                         <p className="text-gray-700 text-sm mb-2">{info.description}</p>
-//                         <p className={`text-${info.color}-700 text-sm font-medium`}>
-//                           {info.recommendation}
-//                         </p>
-//                       </div>
-//                     );
-//                   })}
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default Predictor;
