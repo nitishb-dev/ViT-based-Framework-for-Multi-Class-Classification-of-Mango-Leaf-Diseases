@@ -171,7 +171,48 @@ const Predictor = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    let yPosition = 20;
+    const margin = { top: 25, right: 20, bottom: 25, left: 20 };
+    const contentWidth = pageWidth - margin.left - margin.right;
+    
+    // Helper function to add header and watermark to each page
+    const addHeaderAndWatermark = () => {
+      // Header
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100, 100, 100);
+      doc.text("Nitish B, 21MIS0179", margin.left, 15);
+      
+      // Header line
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin.left, 18, pageWidth - margin.right, 18);
+      
+      // Watermark "MLDC" in center - save current state
+      doc.saveGraphicsState();
+      doc.setFontSize(80);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(240, 240, 240);
+      
+      // Position watermark at exact center of page with slight adjustment
+      const watermarkText = "MLDC";
+      const centerX = pageWidth / 2 + 10; // Move 10px to the right
+      const centerY = pageHeight / 2;
+      
+      // Rotate and place at center
+      doc.text(watermarkText, centerX, centerY, {
+        angle: 45,
+        align: "center",
+        baseline: "middle"
+      });
+      
+      // Restore state
+      doc.restoreGraphicsState();
+      doc.setTextColor(0, 0, 0);
+    };
+    
+    // Add header and watermark to first page
+    addHeaderAndWatermark();
+    
+    let yPosition = margin.top + 5;
 
     // Title
     doc.setFontSize(20);
@@ -187,113 +228,98 @@ const Predictor = () => {
     yPosition += 20;
 
     predictions.forEach((pred, index) => {
-      // Check if we need a new page
-      if (yPosition > pageHeight - 60) {
+      // Start each disease result on a new page (except the first one)
+      if (index > 0) {
         doc.addPage();
-        yPosition = 20;
+        addHeaderAndWatermark();
+        yPosition = margin.top + 5;
       }
 
       // Image header
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text(`Image ${index + 1}: ${pred.filename}`, 14, yPosition);
+      doc.text(`Image ${index + 1}: ${pred.filename}`, margin.left, yPosition);
       yPosition += 8;
 
       if (pred.success) {
         // Classification result
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
-        doc.text(`Disease: ${pred.class}`, 14, yPosition);
+        doc.text(`Disease: ${pred.class}`, margin.left, yPosition);
         doc.setFont("helvetica", "normal");
-        doc.text(`Confidence: ${pred.confidence}%`, 14, yPosition + 6);
-        doc.text(`Status: ${pred.is_mango_leaf ? "Valid Mango Leaf" : "Not a Mango Leaf"}`, 14, yPosition + 12);
+        doc.text(`Confidence: ${pred.confidence}%`, margin.left, yPosition + 6);
+        doc.text(`Status: ${pred.is_mango_leaf ? "Valid Mango Leaf" : "Not a Mango Leaf"}`, margin.left, yPosition + 12);
         yPosition += 20;
 
         if (pred.details) {
           // Description
           doc.setFontSize(11);
           doc.setFont("helvetica", "bold");
-          doc.text("Description:", 14, yPosition);
+          doc.text("Description:", margin.left, yPosition);
           yPosition += 6;
           doc.setFont("helvetica", "normal");
           doc.setFontSize(9);
-          const descLines = doc.splitTextToSize(pred.details.description, pageWidth - 28);
-          doc.text(descLines, 14, yPosition);
+          const descLines = doc.splitTextToSize(pred.details.description, contentWidth);
+          doc.text(descLines, margin.left, yPosition, {
+            maxWidth: contentWidth,
+            align: "left"
+          });
           yPosition += descLines.length * 4 + 6;
-
-          // Check if we need a new page
-          if (yPosition > pageHeight - 80) {
-            doc.addPage();
-            yPosition = 20;
-          }
 
           // Symptoms
           if (pred.details.symptoms && pred.details.symptoms.length > 0) {
             doc.setFontSize(11);
             doc.setFont("helvetica", "bold");
-            doc.text("Symptoms:", 14, yPosition);
+            doc.text("Symptoms:", margin.left, yPosition);
             yPosition += 6;
             doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
             pred.details.symptoms.forEach(symptom => {
-              if (yPosition > pageHeight - 20) {
-                doc.addPage();
-                yPosition = 20;
-              }
-              doc.text(`• ${symptom}`, 18, yPosition);
-              yPosition += 5;
+              const symptomLines = doc.splitTextToSize(`• ${symptom}`, contentWidth - 4);
+              doc.text(symptomLines, margin.left + 4, yPosition, {
+                maxWidth: contentWidth - 4,
+                align: "left"
+              });
+              yPosition += symptomLines.length * 5;
             });
             yPosition += 4;
-          }
-
-          // Check if we need a new page
-          if (yPosition > pageHeight - 60) {
-            doc.addPage();
-            yPosition = 20;
           }
 
           // Treatment
           doc.setFontSize(11);
           doc.setFont("helvetica", "bold");
-          doc.text("Treatment:", 14, yPosition);
+          doc.text("Treatment:", margin.left, yPosition);
           yPosition += 6;
           doc.setFont("helvetica", "normal");
           doc.setFontSize(9);
-          const treatmentLines = doc.splitTextToSize(pred.details.treatment, pageWidth - 28);
-          doc.text(treatmentLines, 14, yPosition);
+          const treatmentLines = doc.splitTextToSize(pred.details.treatment, contentWidth);
+          doc.text(treatmentLines, margin.left, yPosition, {
+            maxWidth: contentWidth,
+            align: "left"
+          });
           yPosition += treatmentLines.length * 4 + 6;
-
-          // Check if we need a new page
-          if (yPosition > pageHeight - 60) {
-            doc.addPage();
-            yPosition = 20;
-          }
 
           // Prevention
           doc.setFontSize(11);
           doc.setFont("helvetica", "bold");
-          doc.text("Prevention:", 14, yPosition);
+          doc.text("Prevention:", margin.left, yPosition);
           yPosition += 6;
           doc.setFont("helvetica", "normal");
           doc.setFontSize(9);
-          const preventionLines = doc.splitTextToSize(pred.details.prevention, pageWidth - 28);
-          doc.text(preventionLines, 14, yPosition);
+          const preventionLines = doc.splitTextToSize(pred.details.prevention, contentWidth);
+          doc.text(preventionLines, margin.left, yPosition, {
+            maxWidth: contentWidth,
+            align: "left"
+          });
           yPosition += preventionLines.length * 4 + 10;
         }
       } else {
         // Error message
         doc.setFontSize(10);
         doc.setTextColor(255, 0, 0);
-        doc.text(`Error: ${pred.error}`, 14, yPosition);
+        doc.text(`Error: ${pred.error}`, margin.left, yPosition);
         doc.setTextColor(0, 0, 0);
         yPosition += 15;
-      }
-
-      // Separator line
-      if (index < predictions.length - 1) {
-        doc.setDrawColor(200, 200, 200);
-        doc.line(14, yPosition, pageWidth - 14, yPosition);
-        yPosition += 10;
       }
     });
 

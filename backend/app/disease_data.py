@@ -285,8 +285,6 @@ Comprehensive management strategy required:
    - Avoid root zone disturbance
         """.strip(),
         "prevention": """
-- Maintain tree vigor through proper nutrition and irrigation
-- Avoid water stress and waterlogging
 - Prune regularly to remove dead wood and improve air circulation
 - Apply protective fungicide sprays during vulnerable periods
 - Whitewash main branches and trunk to prevent sunburn
@@ -295,8 +293,7 @@ Comprehensive management strategy required:
 - Apply balanced fertilization based on soil tests
 - Mulch around trees to maintain soil moisture
 - Monitor trees regularly for early symptoms
-- Remove and destroy any dead or dying branches promptly
-- Avoid planting in poorly drained soils
+
         """.strip()
     },
     
@@ -356,18 +353,13 @@ Timely intervention is crucial for effective control:
    - Avoid broad-spectrum insecticides that harm beneficials
         """.strip(),
         "prevention": """
-- Monitor new flush periods closely
 - Apply preventive sprays before flush emergence
 - Regulate flushing through controlled irrigation and fertilization
 - Maintain balanced nutrition (avoid excess nitrogen)
-- Remove and destroy infested plant parts promptly
-- Keep orchard clean of debris
-- Use yellow sticky traps to monitor adult midge populations
 - Encourage natural enemies through habitat management
 - Avoid water stress that triggers irregular flushing
 - Prune to synchronize flushing across the orchard
 - Apply neem oil sprays as preventive measure
-- Time cultural operations to avoid peak midge activity
         """.strip()
     },
     
@@ -408,8 +400,6 @@ Early intervention provides best control:
    - Use systemic fungicides: Triadimefon 25% WP @ 1g/L
    - Spray Hexaconazole 5% EC @ 2ml/L for severe infections
    - Apply Myclobutanil 10% WP @ 1g/L during flowering
-   - Repeat applications at 10-15 day intervals
-   - Spray early morning or evening for better coverage
 
 2. **Cultural Control**:
    - Prune to improve air circulation and light penetration
@@ -436,13 +426,10 @@ Early intervention provides best control:
 - Apply preventive sulfur sprays before flowering
 - Avoid excessive nitrogen fertilization
 - Ensure adequate sunlight penetration
-- Remove water sprouts and dense growth
 - Monitor regularly during susceptible stages
 - Apply balanced fertilization with adequate potassium
 - Avoid water stress during flowering
 - Use drip irrigation to maintain consistent moisture
-- Remove alternate host plants from vicinity
-- Keep orchard floor clean of debris
         """.strip()
     },
     
@@ -482,7 +469,6 @@ Focus on controlling honeydew-producing insects:
    - Apply systemic insecticides: Imidacloprid 17.8% SL @ 0.5ml/L
    - Use contact insecticides: Acephate 75% SP @ 1g/L
    - Spray horticultural oil (2%) to suffocate insects and remove mould
-   - Apply insecticidal soap for soft-bodied insects
 
 2. **Mould Removal**:
    - Wash leaves with water spray to remove mould
@@ -509,9 +495,6 @@ Focus on controlling honeydew-producing insects:
 - Avoid excessive nitrogen fertilization that promotes tender growth
 - Maintain proper tree spacing and pruning
 - Control ant populations that protect honeydew insects
-- Apply horticultural oil sprays preventively
-- Use yellow sticky traps to monitor insect populations
-- Remove alternate host plants
 - Maintain balanced plant nutrition
 - Ensure good air circulation through pruning
 - Apply neem-based products as preventive measure

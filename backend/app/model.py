@@ -63,11 +63,6 @@ val_transform = transforms.Compose([
 # -----------------------------
 # Predict Function
 # -----------------------------
-# More sophisticated validation: check if predictions are distributed across classes
-# or concentrated (which indicates it's likely a leaf, even if confidence is lower)
-CONFIDENCE_THRESHOLD = 0.25  # Lower threshold - only reject very uncertain predictions
-ENTROPY_THRESHOLD = 2.0  # High entropy means uniform distribution (not a leaf)
-
 def predict(image: Image.Image):
     x = val_transform(image).unsqueeze(0)
     with torch.no_grad():
@@ -79,24 +74,33 @@ def predict(image: Image.Image):
         pred_idx = pred_idx.item()
         
         # Calculate entropy to measure prediction uncertainty
-        # High entropy = predictions spread across all classes = likely not a leaf
-        # Low entropy = predictions concentrated = likely a leaf (even if confidence is moderate)
+        # High entropy = predictions spread uniformly = likely not a mango leaf
         entropy = -torch.sum(probs * torch.log(probs + 1e-10)).item()
         
-        # Get top 3 predictions to see if they're all reasonable
-        top3_probs, top3_indices = torch.topk(probs, min(3, len(CLASS_NAMES)), dim=1)
-        top3_sum = top3_probs.sum().item()
+        # Get the distribution of predictions
+        top2_probs, _ = torch.topk(probs, min(2, len(CLASS_NAMES)), dim=1)
+        top2_diff = (top2_probs[0][0] - top2_probs[0][1]).item() if len(top2_probs[0]) > 1 else 1.0
     
-    # Multi-criteria validation:
-    # 1. Very low confidence AND high entropy = definitely not a leaf
-    # 2. Top 3 predictions sum to less than 60% = very uncertain = not a leaf
-    # 3. Confidence below threshold AND entropy very high = not a leaf
+    # Validation logic - Multi-criteria approach:
+    # Use BOTH entropy and confidence together for better discrimination
     
-    if confidence < CONFIDENCE_THRESHOLD and entropy > ENTROPY_THRESHOLD:
+    # 1. Very high entropy (> 1.9) = model is completely confused = not a mango leaf
+    if entropy > 1.9:
         return "Not a Mango Leaf", confidence
     
-    if top3_sum < 0.60:  # Top 3 predictions don't even sum to 60%
+    # 2. Combined check: Low confidence AND high entropy = not a mango leaf
+    #    This catches non-mango leaves while allowing mango leaves with moderate confidence
+    if confidence < 0.25 and entropy > 1.5:
         return "Not a Mango Leaf", confidence
     
-    # If we pass validation, return the predicted class
+    # 3. Very low confidence (< 18%) = definitely not a mango leaf
+    if confidence < 0.18:
+        return "Not a Mango Leaf", confidence
+    
+    # 4. Low-moderate confidence with very close top 2 predictions = uncertain
+    if confidence < 0.30 and top2_diff < 0.08:
+        return "Not a Mango Leaf", confidence
+    
+    # Otherwise, trust the model's prediction
+    # This accepts mango leaves even with 18-30% confidence if entropy is reasonable
     return CLASS_NAMES[pred_idx], confidence
