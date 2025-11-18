@@ -247,9 +247,8 @@ const Predictor = () => {
         doc.setFont("helvetica", "bold");
         doc.text(`Disease: ${pred.class}`, margin.left, yPosition);
         doc.setFont("helvetica", "normal");
-        doc.text(`Confidence: ${pred.confidence}%`, margin.left, yPosition + 6);
-        doc.text(`Status: ${pred.is_mango_leaf ? "Valid Mango Leaf" : "Not a Mango Leaf"}`, margin.left, yPosition + 12);
-        yPosition += 20;
+        doc.text(`Status: ${pred.is_mango_leaf ? "Valid Mango Leaf" : "Not a Mango Leaf"}`, margin.left, yPosition + 6);
+        yPosition += 14;
 
         if (pred.details) {
           // Description
@@ -495,9 +494,9 @@ const Predictor = () => {
                             </div>
                             <div>
                               <h4 className="text-xl font-bold text-gray-900">{pred.class}</h4>
-                              <p className="text-sm text-gray-600">
+                              {/* <p className="text-sm text-gray-600">
                                 Confidence: <span className="font-semibold">{pred.confidence}%</span>
-                              </p>
+                              </p> */}
                             </div>
                           </div>
 
